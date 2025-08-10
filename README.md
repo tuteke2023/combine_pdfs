@@ -1,13 +1,16 @@
 # PDF Combiner
 
-A simple Streamlit web application for combining multiple PDF files into a single PDF with drag-and-drop reordering functionality.
+An enhanced Streamlit web application for combining multiple PDF files into a single PDF with drag-and-drop upload, preview, and reordering functionality.
 
 ## Features
 
-- Upload multiple PDF files
-- Reorder files before combining
-- Download the combined PDF
-- Clean and intuitive user interface
+- 📥 **Drag & Drop Upload**: Drag PDF files directly onto the upload area
+- 👁️ **PDF Preview**: View first page text content and file information
+- 📊 **File Details**: See page count and file size for each PDF
+- 🔄 **Visual Reordering**: Easy file reordering with grid layout display
+- 📈 **Progress Tracking**: Real-time progress bar during combination
+- 🔒 **Password Protection**: Secure access with password authentication
+- 🚪 **Session Management**: Login/logout functionality
 
 ## Installation
 
