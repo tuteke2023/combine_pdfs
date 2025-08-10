@@ -3,11 +3,51 @@ import PyPDF2
 import tempfile
 import os
 from pathlib import Path
+import hashlib
+import hmac
 
 st.set_page_config(page_title="PDF Combiner", page_icon="📄")
 
+def check_password():
+    """Returns `True` if the user had the correct password."""
+    
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]
+        else:
+            st.session_state["password_correct"] = False
+
+    if st.session_state.get("password_correct", False):
+        return True
+
+    st.title("🔐 PDF Combiner - Login")
+    st.text_input(
+        "Password", 
+        type="password", 
+        on_change=password_entered, 
+        key="password",
+        help="Enter the password to access the PDF Combiner"
+    )
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("😕 Password incorrect")
+    
+    st.info("💡 Contact the administrator if you don't have the password.")
+    return False
+
+if not check_password():
+    st.stop()
+
 st.title("📄 PDF Combiner")
 st.markdown("Upload multiple PDF files and combine them into a single PDF. You can reorder the files before combining.")
+
+col1, col2 = st.columns([5, 1])
+with col2:
+    if st.button("🚪 Logout", type="secondary"):
+        st.session_state["password_correct"] = False
+        st.rerun()
 
 uploaded_files = st.file_uploader(
     "Choose PDF files", 
