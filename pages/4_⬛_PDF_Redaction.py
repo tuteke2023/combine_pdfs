@@ -42,14 +42,15 @@ if 'detected_items' not in st.session_state:
 if 'manual_redactions' not in st.session_state:
     st.session_state.manual_redactions = []
 
-def detect_tfn(text):
-    """Detect potential TFN patterns in text"""
+def detect_tfn(text, abn_positions=None):
+    """Detect potential TFN patterns in text, excluding those that are part of ABNs"""
     patterns = []
     
     # TFN patterns: 9 digits in various formats
+    # Use negative lookbehind and lookahead to avoid matching parts of longer numbers
     tfn_patterns = [
-        r'\b\d{3}[\s-]?\d{3}[\s-]?\d{3}\b',  # XXX XXX XXX or XXX-XXX-XXX
-        r'\b\d{9}\b',  # XXXXXXXXX
+        r'(?<!\d)\d{3}[\s-]?\d{3}[\s-]?\d{3}(?!\d)',  # XXX XXX XXX or XXX-XXX-XXX (not part of longer number)
+        r'(?<!\d)\d{9}(?!\d)',  # XXXXXXXXX (not part of longer number)
     ]
     
     # Also look for context clues
@@ -66,28 +67,48 @@ def detect_tfn(text):
             # Validate it looks like a TFN (basic validation)
             digits = re.sub(r'\D', '', match.group())
             if len(digits) == 9 and match.start() not in seen_positions:
-                found_items.append({
-                    'type': 'TFN',
-                    'text': match.group(),
-                    'start': match.start(),
-                    'end': match.end(),
-                    'digits': digits  # Store normalized digits for better matching
-                })
-                seen_positions.add(match.start())
+                # Check if this TFN is part of an ABN (overlaps with ABN positions)
+                is_part_of_abn = False
+                if abn_positions:
+                    for abn_start, abn_end in abn_positions:
+                        # Check if TFN position overlaps with ABN position
+                        if (match.start() >= abn_start and match.start() < abn_end) or \
+                           (match.end() > abn_start and match.end() <= abn_end):
+                            is_part_of_abn = True
+                            break
+                
+                if not is_part_of_abn:
+                    # Additional check: Look for 2 more digits before this position
+                    # to catch ABNs with different spacing
+                    before_text = text[max(0, match.start()-10):match.start()]
+                    if re.search(r'\d{2}[\s-]?$', before_text):
+                        # Likely part of an ABN, skip it
+                        continue
+                    
+                    found_items.append({
+                        'type': 'TFN',
+                        'text': match.group(),
+                        'start': match.start(),
+                        'end': match.end(),
+                        'digits': digits  # Store normalized digits for better matching
+                    })
+                    seen_positions.add(match.start())
     
     for pattern in context_patterns:
         matches = re.finditer(pattern, text)
         for match in matches:
             if match.start() not in seen_positions:
                 digits = re.sub(r'\D', '', match.group())
-                found_items.append({
-                    'type': 'TFN (with context)',
-                    'text': match.group(),
-                    'start': match.start(),
-                    'end': match.end(),
-                    'digits': digits
-                })
-                seen_positions.add(match.start())
+                # Only add if it's actually 9 digits (not 11)
+                if len(digits) == 9:
+                    found_items.append({
+                        'type': 'TFN (with context)',
+                        'text': match.group(),
+                        'start': match.start(),
+                        'end': match.end(),
+                        'digits': digits
+                    })
+                    seen_positions.add(match.start())
     
     return found_items
 
@@ -377,21 +398,30 @@ with col1:
                     for page_num, text in enumerate(pages_text):
                         page_detections = []
                         
-                        if st.session_state.redaction_patterns['tfn']:
-                            tfns = detect_tfn(text)
-                            for item in tfns:
-                                item['page'] = page_num
-                                item['file'] = pdf_file.name
-                                item['file_idx'] = file_idx
-                            page_detections.extend(tfns)
-                        
+                        # Detect ABNs first to get their positions
+                        abn_positions = []
                         if st.session_state.redaction_patterns['abn']:
                             abns = detect_abn(text)
                             for item in abns:
                                 item['page'] = page_num
                                 item['file'] = pdf_file.name
                                 item['file_idx'] = file_idx
+                                abn_positions.append((item['start'], item['end']))
                             page_detections.extend(abns)
+                        else:
+                            # Even if not detecting ABNs for redaction, we need to know their positions
+                            # to avoid false TFN matches
+                            temp_abns = detect_abn(text)
+                            abn_positions = [(item['start'], item['end']) for item in temp_abns]
+                        
+                        # Now detect TFNs, passing ABN positions to avoid false matches
+                        if st.session_state.redaction_patterns['tfn']:
+                            tfns = detect_tfn(text, abn_positions)
+                            for item in tfns:
+                                item['page'] = page_num
+                                item['file'] = pdf_file.name
+                                item['file_idx'] = file_idx
+                            page_detections.extend(tfns)
                         
                         if st.session_state.redaction_patterns['email']:
                             emails = detect_email(text)
