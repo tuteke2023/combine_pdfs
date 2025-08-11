@@ -331,7 +331,7 @@ with col1:
                                 item['page'] = page_num
                                 item['file'] = pdf_file.name
                                 item['file_idx'] = file_idx
-                                page_detections.extend(tfns)
+                            page_detections.extend(tfns)
                         
                         if st.session_state.redaction_patterns['abn']:
                             abns = detect_abn(text)
@@ -339,7 +339,7 @@ with col1:
                                 item['page'] = page_num
                                 item['file'] = pdf_file.name
                                 item['file_idx'] = file_idx
-                                page_detections.extend(abns)
+                            page_detections.extend(abns)
                         
                         if st.session_state.redaction_patterns['email']:
                             emails = detect_email(text)
@@ -347,7 +347,7 @@ with col1:
                                 item['page'] = page_num
                                 item['file'] = pdf_file.name
                                 item['file_idx'] = file_idx
-                                page_detections.extend(emails)
+                            page_detections.extend(emails)
                         
                         if st.session_state.redaction_patterns['phone']:
                             phones = detect_phone(text)
@@ -355,7 +355,7 @@ with col1:
                                 item['page'] = page_num
                                 item['file'] = pdf_file.name
                                 item['file_idx'] = file_idx
-                                page_detections.extend(phones)
+                            page_detections.extend(phones)
                         
                         if st.session_state.redaction_patterns['custom'] and custom_pattern:
                             custom_items = detect_custom_pattern(text, custom_pattern)
@@ -363,16 +363,37 @@ with col1:
                                 item['page'] = page_num
                                 item['file'] = pdf_file.name
                                 item['file_idx'] = file_idx
-                                page_detections.extend(custom_items)
+                            page_detections.extend(custom_items)
                         
                         file_detections.extend(page_detections)
                     
-                    all_detections.extend(file_detections)
+                    # Deduplicate detections for this file
+                    # Group by page, type, and normalized text to remove duplicates
+                    seen = set()
+                    unique_detections = []
+                    for item in file_detections:
+                        # Normalize the text (remove spaces/dashes for comparison)
+                        normalized = re.sub(r'[\s\-]', '', item['text'])
+                        key = (item['page'], item['type'].split(' ')[0], normalized)  # Use base type for grouping
+                        if key not in seen:
+                            seen.add(key)
+                            unique_detections.append(item)
+                    
+                    all_detections.extend(unique_detections)
                 
                 st.session_state.detected_items = all_detections
                 
+                # Count unique sensitive values (not instances)
+                unique_values = set()
+                for item in all_detections:
+                    normalized = re.sub(r'[\s\-]', '', item['text'])
+                    unique_values.add(normalized)
+                
                 if all_detections:
-                    st.success(f"✅ Found {len(all_detections)} items to redact")
+                    if len(unique_values) != len(all_detections):
+                        st.success(f"✅ Found {len(unique_values)} unique sensitive items across {len(all_detections)} locations")
+                    else:
+                        st.success(f"✅ Found {len(all_detections)} items to redact")
                 else:
                     st.info("No sensitive data detected with selected patterns")
 
@@ -390,21 +411,39 @@ with col2:
         
         # Display detected items
         for file_name, items in files_dict.items():
-            with st.expander(f"📄 {file_name} ({len(items)} items)", expanded=True):
-                # Group by type
+            # Count unique values for this file
+            unique_in_file = set()
+            for item in items:
+                normalized = re.sub(r'[\s\-]', '', item['text'])
+                unique_in_file.add(normalized)
+            
+            with st.expander(f"📄 {file_name} ({len(unique_in_file)} unique items, {len(items)} total locations)", expanded=True):
+                # Group by base type (without context suffix)
                 by_type = {}
                 for item in items:
-                    type_name = item['type']
-                    if type_name not in by_type:
-                        by_type[type_name] = []
-                    by_type[type_name].append(item)
+                    # Group TFN and TFN (with context) together
+                    base_type = item['type'].replace(' (with context)', '')
+                    if base_type not in by_type:
+                        by_type[base_type] = {}
+                    
+                    # Use normalized text as key to group duplicates
+                    normalized = re.sub(r'[\s\-]', '', item['text'])
+                    if normalized not in by_type[base_type]:
+                        by_type[base_type][normalized] = []
+                    by_type[base_type][normalized].append(item)
                 
-                for type_name, type_items in by_type.items():
-                    st.write(f"**{type_name}** ({len(type_items)} found):")
-                    for item in type_items[:5]:  # Show first 5
-                        st.write(f"• Page {item['page'] + 1}: `{item['text']}`")
-                    if len(type_items) > 5:
-                        st.write(f"... and {len(type_items) - 5} more")
+                for type_name, type_values in by_type.items():
+                    st.write(f"**{type_name}** ({len(type_values)} unique):")
+                    for normalized_text, instances in list(type_values.items())[:5]:  # Show first 5 unique values
+                        # Show the original text from first instance
+                        display_text = instances[0]['text']
+                        pages = sorted(set(item['page'] + 1 for item in instances))
+                        if len(pages) == 1:
+                            st.write(f"• Page {pages[0]}: `{display_text}`")
+                        else:
+                            st.write(f"• Pages {', '.join(map(str, pages))}: `{display_text}`")
+                    if len(type_values) > 5:
+                        st.write(f"... and {len(type_values) - 5} more unique values")
         
         st.markdown("---")
         
