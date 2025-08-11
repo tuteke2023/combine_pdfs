@@ -2,7 +2,7 @@ import streamlit as st
 import hmac
 
 st.set_page_config(
-    page_title="PDF Tools Suite", 
+    page_title="TTA PDF Tool Suite", 
     page_icon="📄", 
     layout="wide",
     initial_sidebar_state="expanded"
@@ -22,7 +22,7 @@ def check_password():
     if st.session_state.get("password_correct", False):
         return True
 
-    st.title("🔐 PDF Tools Suite - Login")
+    st.title("🔐 TTA PDF Tool Suite - Login")
     st.text_input(
         "Password", 
         type="password", 
@@ -41,8 +41,8 @@ if not check_password():
     st.stop()
 
 # Main page content
-st.title("📄 PDF Tools Suite")
-st.markdown("Welcome to the PDF Tools Suite! Choose a tool from the sidebar to get started.")
+st.title("📄 TTA PDF Tool Suite")
+st.markdown("Welcome to the TTA PDF Tool Suite! Choose a tool from the sidebar to get started.")
 
 col1, col2 = st.columns([5, 1])
 with col2:

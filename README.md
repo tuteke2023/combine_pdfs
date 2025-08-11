@@ -1,4 +1,4 @@
-# PDF Tools Suite
+# TTA PDF Tool Suite
 
 A comprehensive Streamlit web application with multiple PDF tools including PDF combiner, encryptor, and signature tool - all with password protection.
 
@@ -40,8 +40,8 @@ No system dependencies required! The app now uses PyMuPDF for PDF preview functi
 
 1. Clone the repository:
 ```bash
-git clone git@github.com:tuteke2023/combine_pdfs.git
-cd combine_pdfs
+git clone git@github.com:tuteke2023/tta-pdf-tool-suite.git
+cd tta-pdf-tool-suite
 ```
 
 2. Create a virtual environment:
