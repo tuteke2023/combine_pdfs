@@ -1,6 +1,6 @@
 # PDF Tools Suite
 
-A comprehensive Streamlit web application with multiple PDF tools including a PDF combiner and PDF encryptor with password protection.
+A comprehensive Streamlit web application with multiple PDF tools including PDF combiner, encryptor, and signature tool - all with password protection.
 
 ## Features
 
@@ -23,7 +23,20 @@ A comprehensive Streamlit web application with multiple PDF tools including a PD
 - 📝 **Password Management**: Download password list for encrypted files
 - 🗂️ **ZIP Download**: Download all encrypted files and passwords in one ZIP
 
+### ✍️ PDF Signature
+- 📸 **Flexible Signature Input**: Upload signature image or draw digitally
+- 📍 **Interactive Positioning**: Click on PDF preview to position signature
+- 📅 **Date Stamp**: Optional automatic date addition below signature
+- 📑 **Multi-Page Support**: Choose which page to sign
+- 👁️ **Live Preview**: See exactly where signature will appear before applying
+
 ## Installation
+
+### Prerequisites
+
+No system dependencies required! The app now uses PyMuPDF for PDF preview functionality, which works entirely within the Python environment.
+
+### Setup
 
 1. Clone the repository:
 ```bash

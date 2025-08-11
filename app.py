@@ -53,28 +53,39 @@ with col2:
 st.markdown("---")
 
 # Display available tools
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("""
     ### 🔀 PDF Combiner
-    Combine multiple PDF files into a single document with:
-    - Drag & drop file upload
-    - Preview and reorder files
+    Combine multiple PDF files into a single document:
+    - Drag & drop upload
+    - Preview and reorder
     - Download combined PDF
     
-    **→ Select '1_📄_PDF_Combiner' from the sidebar**
+    **→ '1_📄_PDF_Combiner'**
     """)
 
 with col2:
     st.markdown("""
     ### 🔒 PDF Encryptor
-    Protect your PDF files with password encryption:
-    - Upload single or multiple PDFs
-    - Automatic secure password generation
-    - Download encrypted PDFs with passwords
+    Protect PDFs with passwords:
+    - Bulk encryption
+    - Secure passwords
+    - ZIP download
     
-    **→ Select '2_🔒_PDF_Encryptor' from the sidebar**
+    **→ '2_🔒_PDF_Encryptor'**
+    """)
+
+with col3:
+    st.markdown("""
+    ### ✍️ PDF Signature
+    Add signatures to PDFs:
+    - Draw or upload signature
+    - Interactive positioning
+    - Date stamp option
+    
+    **→ '3_✍️_PDF_Signature'**
     """)
 
 st.markdown("---")
