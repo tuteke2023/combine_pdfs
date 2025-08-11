@@ -1,16 +1,27 @@
-# PDF Combiner
+# PDF Tools Suite
 
-An enhanced Streamlit web application for combining multiple PDF files into a single PDF with drag-and-drop upload, preview, and reordering functionality.
+A comprehensive Streamlit web application with multiple PDF tools including a PDF combiner and PDF encryptor with password protection.
 
 ## Features
 
+### 🏠 Main Features
+- 🔒 **Password Protected Access**: Secure login system for all tools
+- 📑 **Multi-Page App**: Navigate between different PDF tools
+- 🚪 **Session Management**: Login/logout functionality
+
+### 📄 PDF Combiner
 - 📥 **Drag & Drop Upload**: Drag PDF files directly onto the upload area
 - 👁️ **PDF Preview**: View first page text content and file information
 - 📊 **File Details**: See page count and file size for each PDF
 - 🔄 **Visual Reordering**: Easy file reordering with grid layout display
 - 📈 **Progress Tracking**: Real-time progress bar during combination
-- 🔒 **Password Protection**: Secure access with password authentication
-- 🚪 **Session Management**: Login/logout functionality
+
+### 🔐 PDF Encryptor
+- 🔑 **Automatic Password Generation**: Cryptographically secure random passwords
+- 🛡️ **128-bit AES Encryption**: Strong PDF encryption
+- 📦 **Bulk Processing**: Encrypt multiple PDFs at once
+- 📝 **Password Management**: Download password list for encrypted files
+- 🗂️ **ZIP Download**: Download all encrypted files and passwords in one ZIP
 
 ## Installation
 
