@@ -53,6 +53,9 @@ with col2:
 st.markdown("---")
 
 # Display available tools
+st.subheader("🛠️ Available Tools")
+
+# First row of tools
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -86,6 +89,20 @@ with col3:
     - Date stamp option
     
     **→ '3_✍️_PDF_Signature'**
+    """)
+
+# Second row for new tool
+col4, col5, col6 = st.columns(3)
+
+with col4:
+    st.markdown("""
+    ### ⬛ PDF Redaction
+    Remove sensitive information:
+    - Auto-detect TFN/ABN
+    - Pattern matching
+    - Audit logging
+    
+    **→ '4_⬛_PDF_Redaction'**
     """)
 
 st.markdown("---")
