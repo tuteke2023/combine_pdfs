@@ -21,7 +21,6 @@ except:
     PYMUPDF_AVAILABLE = False
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="PDF Signature", page_icon="✍️", layout="wide")
 
@@ -317,100 +316,63 @@ with col2:
             # Get image dimensions
             img_width, img_height = pdf_image.size
             
-            # Interactive positioning
-            st.subheader("Position Your Signature")
-            st.info("💡 Click on the document preview below to position your signature")
+            # Position controls
+            st.subheader("📍 Adjust Signature Position")
+            st.info("💡 Use the sliders to position your signature on the document")
             
-            # Prepare signature for overlay
-            if uploaded_signature:
-                sig_img = Image.open(uploaded_signature)
-            else:
-                sig_img = drawn_signature
-            sig_img = sig_img.resize((150, 50), Image.Resampling.LANCZOS)
+            col_x, col_y = st.columns(2)
             
-            # Create the interactive plot with plotly
-            fig = go.Figure()
+            with col_x:
+                max_x = max(0, img_width - 150)
+                st.session_state.signature_x = st.slider(
+                    "↔️ Horizontal Position", 
+                    0, 
+                    max_x, 
+                    value=min(st.session_state.signature_x, max_x), 
+                    key="x_slider_main",
+                    help="Move signature left or right"
+                )
             
-            # Convert PIL image to numpy array for plotly
-            img_array = np.array(pdf_image)
+            with col_y:
+                max_y = max(0, img_height - 50)
+                st.session_state.signature_y = st.slider(
+                    "↕️ Vertical Position", 
+                    0, 
+                    max_y, 
+                    value=min(st.session_state.signature_y, max_y), 
+                    key="y_slider_main",
+                    help="Move signature up or down"
+                )
             
-            # Add the PDF page as background
-            fig.add_trace(go.Image(z=img_array))
+            # Quick position presets
+            st.subheader("⚡ Quick Position Presets")
+            col1, col2, col3 = st.columns(3)
             
-            # Add a scatter point for the signature position
-            fig.add_trace(go.Scatter(
-                x=[st.session_state.signature_x + 75],  # Center of signature
-                y=[st.session_state.signature_y + 25],  # Center of signature
-                mode='markers',
-                marker=dict(size=20, color='red', symbol='x'),
-                name='Signature Position',
-                hovertemplate='Click anywhere to move signature here<extra></extra>'
-            ))
-            
-            # Configure the layout
-            fig.update_layout(
-                height=600,
-                xaxis=dict(
-                    range=[0, img_width],
-                    showgrid=False,
-                    zeroline=False,
-                    visible=False
-                ),
-                yaxis=dict(
-                    range=[img_height, 0],  # Invert y-axis for image coordinates
-                    showgrid=False,
-                    zeroline=False,
-                    visible=False,
-                    scaleanchor='x'
-                ),
-                margin=dict(l=0, r=0, t=0, b=0),
-                hovermode='closest',
-                dragmode=False,
-                showlegend=False
-            )
-            
-            # Display the interactive plot
-            click_data = st.plotly_chart(fig, use_container_width=True, on_select="rerun", selection_mode="points")
-            
-            # Handle click events
-            if click_data and 'selection' in click_data and click_data['selection']['points']:
-                # Get the clicked coordinates
-                point = click_data['selection']['points'][0]
-                if 'x' in point and 'y' in point:
-                    # Update signature position (adjust for signature size to center on click)
-                    new_x = max(0, min(int(point['x']) - 75, img_width - 150))
-                    new_y = max(0, min(int(point['y']) - 25, img_height - 50))
-                    st.session_state.signature_x = new_x
-                    st.session_state.signature_y = new_y
+            with col1:
+                if st.button("↙️ Bottom Left", use_container_width=True):
+                    st.session_state.signature_x = 50
+                    st.session_state.signature_y = img_height - 100
                     st.rerun()
             
-            # Optional: Keep sliders for fine-tuning
-            with st.expander("Fine-tune position with sliders"):
-                col_x, col_y = st.columns(2)
-                
-                with col_x:
-                    max_x = max(0, img_width - 150)
-                    x_pos = st.slider("Horizontal Position", 0, max_x, 
-                                     value=min(st.session_state.signature_x, max_x), key="x_slider")
-                    if x_pos != st.session_state.signature_x:
-                        st.session_state.signature_x = x_pos
-                        st.rerun()
-                
-                with col_y:
-                    max_y = max(0, img_height - 50)
-                    y_pos = st.slider("Vertical Position", 0, max_y, 
-                                     value=min(st.session_state.signature_y, max_y), key="y_slider")
-                    if y_pos != st.session_state.signature_y:
-                        st.session_state.signature_y = y_pos
-                        st.rerun()
+            with col2:
+                if st.button("⬇️ Bottom Center", use_container_width=True):
+                    st.session_state.signature_x = (img_width - 150) // 2
+                    st.session_state.signature_y = img_height - 100
+                    st.rerun()
+            
+            with col3:
+                if st.button("↘️ Bottom Right", use_container_width=True):
+                    st.session_state.signature_x = img_width - 200
+                    st.session_state.signature_y = img_height - 100
+                    st.rerun()
             
             # Show preview with signature
-            st.subheader("Preview with Signature")
+            st.subheader("👁️ Preview with Signature")
             
             # Create a copy of the PDF image
             preview_img = pdf_image.copy()
             
-            # Overlay signature on preview
+            # Prepare signature for overlay
             if uploaded_signature:
                 sig_img = Image.open(uploaded_signature)
             else:
@@ -436,6 +398,14 @@ with col2:
                 except:
                     font = ImageFont.load_default()
                 draw.text((preview_x + 65, preview_y + 52), date_text, fill='black', font=font)
+            
+            # Add position indicator rectangle
+            draw = ImageDraw.Draw(preview_img)
+            draw.rectangle(
+                [preview_x, preview_y, preview_x + 150, preview_y + 50],
+                outline='red',
+                width=2
+            )
             
             # Show preview
             page_label = f"Page {st.session_state.selected_page}" if num_pages > 1 else "Preview"
@@ -599,7 +569,7 @@ with col1:
     1. **Upload** your PDF document
     2. **Select** the page to sign (for multi-page PDFs)
     3. **Add** your signature (upload image or draw)
-    4. **Position** your signature by clicking on the preview
+    4. **Position** your signature using the sliders
     5. **Download** your signed PDF
     """)
 
@@ -607,8 +577,9 @@ with col2:
     st.markdown("""
     ### ✨ Features:
     - 📸 Upload signature image or draw digitally
-    - 📍 Interactive signature positioning
+    - 🎚️ Precise positioning with sliders
+    - ⚡ Quick position presets
     - 📅 Optional date stamp
     - 📑 Multi-page PDF support
-    - 👁️ Live preview before signing
+    - 👁️ Live preview (when available)
     """)
