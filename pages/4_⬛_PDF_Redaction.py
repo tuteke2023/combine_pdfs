@@ -58,29 +58,36 @@ def detect_tfn(text):
     ]
     
     found_items = []
+    seen_positions = set()  # Track positions to avoid duplicates
     
     for pattern in tfn_patterns:
         matches = re.finditer(pattern, text)
         for match in matches:
             # Validate it looks like a TFN (basic validation)
             digits = re.sub(r'\D', '', match.group())
-            if len(digits) == 9:
+            if len(digits) == 9 and match.start() not in seen_positions:
                 found_items.append({
                     'type': 'TFN',
                     'text': match.group(),
                     'start': match.start(),
-                    'end': match.end()
+                    'end': match.end(),
+                    'digits': digits  # Store normalized digits for better matching
                 })
+                seen_positions.add(match.start())
     
     for pattern in context_patterns:
         matches = re.finditer(pattern, text)
         for match in matches:
-            found_items.append({
-                'type': 'TFN (with context)',
-                'text': match.group(),
-                'start': match.start(),
-                'end': match.end()
-            })
+            if match.start() not in seen_positions:
+                digits = re.sub(r'\D', '', match.group())
+                found_items.append({
+                    'type': 'TFN (with context)',
+                    'text': match.group(),
+                    'start': match.start(),
+                    'end': match.end(),
+                    'digits': digits
+                })
+                seen_positions.add(match.start())
     
     return found_items
 
@@ -89,38 +96,48 @@ def detect_abn(text):
     patterns = []
     
     # ABN patterns: 11 digits in various formats
+    # More flexible patterns to catch different spacing
     abn_patterns = [
-        r'\b\d{2}[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}\b',  # XX XXX XXX XXX
+        r'\b\d{2}\s+\d{3}\s+\d{3}\s+\d{3}\b',  # XX XXX XXX XXX (with spaces)
+        r'\b\d{2}[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}\b',  # XX XXX XXX XXX or XX-XXX-XXX-XXX
         r'\b\d{11}\b',  # XXXXXXXXXXX
     ]
     
     context_patterns = [
-        r'(?i)(?:abn|australian\s*business\s*number)[:\s]*(\d{2}[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}|\d{11})',
+        r'(?i)(?:abn|australian\s*business\s*number|a\.b\.n\.)[:\s]*(\d{2}[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}|\d{11})',
     ]
     
     found_items = []
+    seen_positions = set()  # Track positions to avoid duplicates
     
     for pattern in abn_patterns:
         matches = re.finditer(pattern, text)
         for match in matches:
             digits = re.sub(r'\D', '', match.group())
             if len(digits) == 11:
-                found_items.append({
-                    'type': 'ABN',
-                    'text': match.group(),
-                    'start': match.start(),
-                    'end': match.end()
-                })
+                # Check if we've already found an ABN at this position
+                if match.start() not in seen_positions:
+                    found_items.append({
+                        'type': 'ABN',
+                        'text': match.group(),
+                        'start': match.start(),
+                        'end': match.end(),
+                        'digits': digits  # Store normalized digits for better matching
+                    })
+                    seen_positions.add(match.start())
     
     for pattern in context_patterns:
         matches = re.finditer(pattern, text)
         for match in matches:
-            found_items.append({
-                'type': 'ABN (with context)',
-                'text': match.group(),
-                'start': match.start(),
-                'end': match.end()
-            })
+            if match.start() not in seen_positions:
+                found_items.append({
+                    'type': 'ABN (with context)',
+                    'text': match.group(),
+                    'start': match.start(),
+                    'end': match.end(),
+                    'digits': re.sub(r'\D', '', match.group())
+                })
+                seen_positions.add(match.start())
     
     return found_items
 
@@ -233,6 +250,41 @@ def create_redacted_pdf(pdf_file, redaction_items, pages_to_redact=None):
                 for item in items:
                     # Search for text and get its location
                     text_instances = page.search_for(item['text'])
+                    
+                    # If exact match doesn't work, try searching for normalized digits
+                    if not text_instances and 'digits' in item:
+                        # For ABN/TFN, try to find the digits in various formats
+                        digits = item['digits']
+                        
+                        # Try different ABN formats if it's 11 digits
+                        if len(digits) == 11:
+                            # Try XX XXX XXX XXX format
+                            formatted = f"{digits[:2]} {digits[2:5]} {digits[5:8]} {digits[8:]}"
+                            text_instances = page.search_for(formatted)
+                            
+                            if not text_instances:
+                                # Try XXXXXXXXXXX format
+                                text_instances = page.search_for(digits)
+                            
+                            if not text_instances:
+                                # Try XX-XXX-XXX-XXX format
+                                formatted = f"{digits[:2]}-{digits[2:5]}-{digits[5:8]}-{digits[8:]}"
+                                text_instances = page.search_for(formatted)
+                        
+                        # Try different TFN formats if it's 9 digits
+                        elif len(digits) == 9:
+                            # Try XXX XXX XXX format
+                            formatted = f"{digits[:3]} {digits[3:6]} {digits[6:]}"
+                            text_instances = page.search_for(formatted)
+                            
+                            if not text_instances:
+                                # Try XXXXXXXXX format
+                                text_instances = page.search_for(digits)
+                            
+                            if not text_instances:
+                                # Try XXX-XXX-XXX format
+                                formatted = f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+                                text_instances = page.search_for(formatted)
                     
                     # Add redaction annotation for each instance
                     for inst in text_instances:
