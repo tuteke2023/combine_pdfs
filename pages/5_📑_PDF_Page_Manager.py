@@ -30,23 +30,32 @@ if 'pdf_pages' not in st.session_state:
 if 'current_file_name' not in st.session_state:
     st.session_state.current_file_name = None
 
-def pdf_page_to_image(pdf_bytes, page_num, password=None):
+def pdf_page_to_image(pdf_file, page_num, password=None):
     """Convert a specific PDF page to image for preview"""
     if not PYMUPDF_AVAILABLE:
         return None
     
     try:
+        # Read the PDF bytes fresh each time
+        pdf_file.seek(0)
+        pdf_bytes = pdf_file.read()
+        pdf_file.seek(0)
+        
+        # Open with PyMuPDF
         pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         
         # Handle password if needed
         if pdf_doc.is_encrypted:
             if password:
                 if not pdf_doc.authenticate(password):
-                    st.error("🔒 Incorrect password for PDF")
                     return None
             else:
-                st.error("🔒 PDF is encrypted. Please provide password.")
                 return None
+        
+        # Check page number is valid
+        if page_num >= len(pdf_doc):
+            pdf_doc.close()
+            return None
         
         # Get the page (0-indexed)
         page = pdf_doc[page_num]
@@ -63,7 +72,8 @@ def pdf_page_to_image(pdf_bytes, page_num, password=None):
         return img
         
     except Exception as e:
-        st.error(f"Error converting page to image: {str(e)}")
+        # Don't show error for each page, just return None
+        print(f"Could not convert page {page_num + 1}: {str(e)}")
         return None
 
 def extract_pages_info(pdf_file, password=None):
@@ -78,14 +88,12 @@ def extract_pages_info(pdf_file, password=None):
             return []
     
     pages_info = []
-    pdf_bytes = pdf_file.read()
-    pdf_file.seek(0)
     
     for i in range(len(reader.pages)):
         page_info = {
             'page_num': i + 1,  # 1-indexed for display
             'original_index': i,  # 0-indexed for processing
-            'preview': pdf_page_to_image(pdf_bytes, i, password)
+            'preview': pdf_page_to_image(pdf_file, i, password)  # Pass file object directly
         }
         pages_info.append(page_info)
     
@@ -161,6 +169,11 @@ with col1:
                 st.session_state.page_order = [p['original_index'] for p in pages_info]
         
         st.success(f"✅ Loaded {len(st.session_state.pdf_pages)} pages")
+        
+        # Check if previews are available
+        has_preview = any(p['preview'] is not None for p in st.session_state.pdf_pages)
+        if not has_preview:
+            st.info("ℹ️ Visual previews not available, but you can still manage pages")
         
         # Controls
         st.header("🎛️ Page Controls")
@@ -319,7 +332,8 @@ with col2:
                             elif is_deleted:
                                 st.info("🗑️ Marked for deletion")
                             else:
-                                st.info("No preview available")
+                                # Show page info even without preview
+                                st.info(f"📄 Page {page_info['page_num']}\n(Preview not available)")
                             
                             # Control buttons
                             col_up, col_down, col_del = st.columns(3)
