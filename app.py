@@ -91,7 +91,7 @@ with col3:
     **→ '3_✍️_PDF_Signature'**
     """)
 
-# Second row for new tool
+# Second row of tools
 col4, col5, col6 = st.columns(3)
 
 with col4:
@@ -103,6 +103,17 @@ with col4:
     - Audit logging
     
     **→ '4_⬛_PDF_Redaction'**
+    """)
+
+with col5:
+    st.markdown("""
+    ### 📑 PDF Page Manager
+    Manage pages in a single PDF:
+    - Visual page preview
+    - Reorder pages
+    - Delete unwanted pages
+    
+    **→ '5_📑_PDF_Page_Manager'**
     """)
 
 st.markdown("---")
