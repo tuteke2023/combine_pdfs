@@ -20,6 +20,8 @@ st.set_page_config(page_title="PDF Redaction", page_icon="⬛", layout="wide")
 # Check if user is authenticated
 if not st.session_state.get("password_correct", False):
     st.error("🔒 Please login from the Home page first")
+    if st.button("🏠 Go to Home Page", type="primary"):
+        st.switch_page("app.py")
     st.stop()
 
 st.title("⬛ PDF Redaction Tool")
